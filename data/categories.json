@@ -1,0 +1,34 @@
+{
+  "majorCategories": [
+    {
+      "value": "everyday",
+      "label": "Повседневные",
+      "subCategories": ["Продукты", "Аптека", "Бытовые товары"]
+    },
+    {
+      "value": "housing",
+      "label": "Жильё",
+      "subCategories": ["Аренда", "Коммунальные услуги", "Ремонт"]
+    },
+    {
+      "value": "transport",
+      "label": "Транспорт",
+      "subCategories": ["Общественный транспорт", "Такси", "Авто"]
+    },
+    {
+      "value": "fun",
+      "label": "Развлечения",
+      "subCategories": ["Кино", "Путешествия", "Подписки"]
+    },
+    {
+      "value": "investments",
+      "label": "Инвестиции",
+      "subCategories": ["Брокерский счёт", "Пенсионные накопления", "Криптовалюты"]
+    },
+    {
+      "value": "other",
+      "label": "Другое",
+      "subCategories": []
+    }
+  ]
+}
