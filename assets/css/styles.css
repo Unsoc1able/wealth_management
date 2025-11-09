@@ -97,6 +97,18 @@ button.secondary:hover {
   color: #0b7285;
 }
 
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.form-actions button {
+  flex: 1 1 200px;
+  margin-top: 0;
+}
+
 .row {
   display: flex;
   gap: 12px;
@@ -439,6 +451,16 @@ ul, ol {
   align-items: center;
   margin-bottom: 12px;
   gap: 12px;
+}
+
+.savings-card-actions {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.savings-card-actions .icon-button {
+  width: 36px;
+  height: 36px;
 }
 
 .savings-card-body {
