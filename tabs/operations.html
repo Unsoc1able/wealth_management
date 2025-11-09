@@ -1,58 +1,93 @@
-<section>
-  <h2>Добавить транзакцию</h2>
-  <form id="transaction-form">
-    <div class="row">
-      <label>
-        Дата
-        <input type="date" id="date" required />
-      </label>
-      <label>
-        Сумма
-        <input type="number" id="amount" min="0.01" step="0.01" placeholder="0.00" required />
-      </label>
-    </div>
-
-    <div class="row">
-      <label>
-        Тип операции
-        <select id="type">
-          <option value="expense">Расход</option>
-          <option value="income">Доход</option>
-        </select>
-      </label>
-      <label>
-        Крупная категория
-        <select id="major-category"></select>
-      </label>
-    </div>
-
-    <label>
-      Подкатегория
-      <input type="text" id="sub-category" placeholder="например, продукты" list="sub-category-suggestions" />
-    </label>
-
-    <datalist id="sub-category-suggestions"></datalist>
-
-    <label>
-      Комментарий
-      <input type="text" id="note" placeholder="по желанию" />
-    </label>
-
-    <button type="submit">Сохранить</button>
-  </form>
-  <p id="form-status" class="muted"></p>
-</section>
-
-<section>
-  <h2>Транзакции за месяц</h2>
+<section class="operations-month">
+  <div class="section-heading">
+    <h2>Транзакции за месяц</h2>
+    <button type="button" id="refresh-button" class="secondary icon-text">
+      <span class="icon" aria-hidden="true">⟳</span>
+      Обновить данные
+    </button>
+  </div>
   <div class="controls">
     <label>
       Месяц
       <input type="month" id="month-filter" />
     </label>
-    <button type="button" id="refresh-button" class="secondary">Обновить данные</button>
   </div>
   <p id="refresh-status" class="muted status-line"></p>
   <div id="monthly-summary" class="summary-grid"></div>
-  <div id="monthly-transactions" class="empty-state">Загрузка...</div>
+  <div id="monthly-transactions" class="empty-state">Выберите месяц для просмотра операций.</div>
 </section>
+
+<section id="recurring-section">
+  <div class="section-heading">
+    <h2>Регулярные платежи</h2>
+    <p class="muted">Все операции, помеченные как регулярные, учитываются раз в месяц и собраны здесь для удобства.</p>
+  </div>
+  <div id="recurring-transactions" class="empty-state">Пока нет регулярных платежей.</div>
+</section>
+
+<div class="fab-container">
+  <button type="button" id="open-transaction-sheet" class="fab" aria-label="Добавить транзакцию">
+    <span aria-hidden="true">+</span>
+  </button>
+</div>
+
+<div id="transaction-sheet" class="sheet" aria-hidden="true">
+  <div class="sheet-backdrop" data-close="true"></div>
+  <div class="sheet-surface">
+    <header class="sheet-header">
+      <h2>Добавить транзакцию</h2>
+      <button type="button" id="close-transaction-sheet" class="icon-button" aria-label="Закрыть форму">
+        <span aria-hidden="true">✕</span>
+      </button>
+    </header>
+    <form id="transaction-form">
+      <div class="row">
+        <label>
+          Дата
+          <input type="date" id="date" required />
+        </label>
+        <label>
+          Сумма
+          <input type="number" id="amount" min="0.01" step="0.01" placeholder="0.00" required />
+        </label>
+      </div>
+
+      <div class="row">
+        <label>
+          Тип операции
+          <select id="type">
+            <option value="expense">Расход</option>
+            <option value="income">Доход</option>
+          </select>
+        </label>
+        <label>
+          Категория
+          <select id="major-category"></select>
+        </label>
+      </div>
+
+      <label>
+        Подкатегория
+        <select id="sub-category"></select>
+      </label>
+
+      <label id="custom-subcategory-wrapper" class="hidden">
+        Своя подкатегория
+        <input type="text" id="custom-sub-category" placeholder="Например, подарок" />
+      </label>
+
+      <label>
+        Комментарий
+        <input type="text" id="note" placeholder="по желанию" />
+      </label>
+
+      <label class="checkbox">
+        <input type="checkbox" id="is-recurring" />
+        Сделать регулярным платежом
+      </label>
+
+      <button type="submit">Сохранить</button>
+      <p id="form-status" class="muted"></p>
+    </form>
+  </div>
+</div>

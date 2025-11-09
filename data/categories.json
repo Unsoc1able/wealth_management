@@ -3,32 +3,67 @@
     {
       "value": "everyday",
       "label": "Повседневные",
-      "subCategories": ["Продукты", "Аптека", "Бытовые товары"]
+      "emoji": "🧺",
+      "subCategories": [
+        { "value": "groceries", "label": "Продукты", "emoji": "🛒" },
+        { "value": "restaurants", "label": "Рестораны", "emoji": "🍽️" },
+        { "value": "household", "label": "Бытовая химия", "emoji": "🧼" },
+        { "value": "selfcare", "label": "Уход за собой", "emoji": "🛁" },
+        { "value": "cosmetics", "label": "Косметика", "emoji": "💄" },
+        { "value": "alcohol", "label": "Алкоголь", "emoji": "🍷" },
+        { "value": "snacks", "label": "Перекусы/Кофе", "emoji": "☕" },
+        { "value": "dopamine", "label": "Легкий дофаминчик", "emoji": "🎁" }
+      ]
     },
     {
-      "value": "housing",
-      "label": "Жильё",
-      "subCategories": ["Аренда", "Коммунальные услуги", "Ремонт"]
+      "value": "large-purchases",
+      "label": "Крупные покупки",
+      "emoji": "🛍️",
+      "subCategories": [
+        { "value": "clothes", "label": "Одежда", "emoji": "👗" },
+        { "value": "electronics", "label": "Техника", "emoji": "📱" },
+        { "value": "perfume", "label": "Духи", "emoji": "🪄" }
+      ]
+    },
+    {
+      "value": "home",
+      "label": "Дом",
+      "emoji": "🏠",
+      "subCategories": [
+        { "value": "rent", "label": "Аренда", "emoji": "🔑" },
+        { "value": "supplies", "label": "Товары для дома", "emoji": "🪑" },
+        { "value": "utilities", "label": "ЖКХ", "emoji": "💡" },
+        { "value": "internet", "label": "Интернет", "emoji": "🌐" }
+      ]
+    },
+    {
+      "value": "regular-payments",
+      "label": "Регулярные платежи",
+      "emoji": "📆",
+      "subCategories": [
+        { "value": "phone", "label": "Телефон", "emoji": "📱" },
+        { "value": "subscriptions", "label": "Подписки", "emoji": "🔄" }
+      ]
     },
     {
       "value": "transport",
       "label": "Транспорт",
-      "subCategories": ["Общественный транспорт", "Такси", "Авто"]
+      "emoji": "🚌",
+      "subCategories": [
+        { "value": "metro", "label": "Метро", "emoji": "🚇" },
+        { "value": "taxi", "label": "Такси", "emoji": "🚕" }
+      ]
     },
     {
-      "value": "fun",
-      "label": "Развлечения",
-      "subCategories": ["Кино", "Путешествия", "Подписки"]
-    },
-    {
-      "value": "investments",
-      "label": "Инвестиции",
-      "subCategories": ["Брокерский счёт", "Пенсионные накопления", "Криптовалюты"]
-    },
-    {
-      "value": "other",
-      "label": "Другое",
-      "subCategories": []
+      "value": "pets",
+      "label": "Животные",
+      "emoji": "🐾",
+      "subCategories": [
+        { "value": "grooming", "label": "груминг", "emoji": "✂️" },
+        { "value": "vet", "label": "ветеринар", "emoji": "🩺" },
+        { "value": "toys", "label": "игрушки", "emoji": "🧸" },
+        { "value": "food", "label": "корм", "emoji": "🍖" }
+      ]
     }
   ]
 }
