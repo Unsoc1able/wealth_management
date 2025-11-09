@@ -1,11 +1,20 @@
 <section>
   <h2>Месячная динамика</h2>
-  <div id="monthly-overview" class="empty-state">Загрузка...</div>
+  <div class="muted">Сравнение доходов, расходов и дельты по месяцам.</div>
+  <div id="monthly-trends" class="chart-container empty-state">Загрузка...</div>
 </section>
 
 <section>
-  <h2>Крупные категории (расходы)</h2>
-  <div id="category-breakdown" class="empty-state">Загрузка...</div>
+  <h2>Расходы по категориям</h2>
+  <div id="category-trends" class="chart-container empty-state">Загрузка...</div>
+  <div class="analytics-controls">
+    <label for="category-select">Категория для детализации</label>
+    <select id="category-select"></select>
+  </div>
+  <div id="subcategory-title" class="muted"></div>
+  <div id="subcategory-trends" class="chart-container empty-state">
+    Выберите категорию, чтобы увидеть динамику подкатегорий.
+  </div>
 </section>
 
 <section>

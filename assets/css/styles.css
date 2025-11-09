@@ -197,6 +197,26 @@ ul, ol {
   color: #333;
 }
 
+.chart-container {
+  width: 100%;
+  min-height: 320px;
+}
+
+.analytics-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.analytics-controls label {
+  margin-bottom: 4px;
+}
+
+.analytics-controls select {
+  max-width: 320px;
+}
+
 .transaction-list {
   display: flex;
   flex-direction: column;
