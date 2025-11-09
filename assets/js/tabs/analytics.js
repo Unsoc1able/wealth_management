@@ -79,7 +79,12 @@ export function initAnalyticsTab({ root, categories = [] }) {
 
     const list = document.createElement("ul");
     categoryTotals.forEach((total, key) => {
-      const categoryName = categoryList.find((c) => c.value === key)?.label || key;
+      const category = categoryList.find((c) => c.value === key);
+      const categoryName = category
+        ? category.emoji
+          ? `${category.emoji} ${category.label}`
+          : category.label
+        : key;
       const avg = total / monthsCount;
       const item = document.createElement("li");
       item.textContent = `${categoryName} — всего ${total.toFixed(2)}, в среднем ${avg.toFixed(2)} в месяц`;
@@ -153,16 +158,23 @@ export function initAnalyticsTab({ root, categories = [] }) {
 
     sorted.forEach((tx) => {
       const date = normalizeDate(tx.date) || new Date();
-      const categoryName = categoryList.find((c) => c.value === tx.majorCategory)?.label || tx.majorCategory || "Без категории";
+      const category = categoryList.find((c) => c.value === tx.majorCategory);
+      const categoryName = category
+        ? category.emoji
+          ? `${category.emoji} ${category.label}`
+          : category.label
+        : tx.majorCategory || "Без категории";
       const sign = tx.type === "income" ? "+" : "-";
       const item = document.createElement("div");
       item.className = "transaction-item";
+      const subCategoryLabel = tx.subCategory ? ` / ${tx.subCategory}` : "";
+      const badge = tx.isRecurring ? '<span class="badge">Регулярно</span>' : "";
       item.innerHTML = `
         <div class="info-line">
           <span>${date.toLocaleDateString()}</span>
           <strong>${sign}${tx.amount.toFixed(2)}</strong>
         </div>
-        <div class="muted">${categoryName}${tx.subCategory ? ` / ${tx.subCategory}` : ""}</div>
+        <div class="muted">${categoryName}${subCategoryLabel}${badge ? ` ${badge}` : ""}</div>
         ${tx.note ? `<div>${tx.note}</div>` : ""}
       `;
       recentTransactionsEl.appendChild(item);
