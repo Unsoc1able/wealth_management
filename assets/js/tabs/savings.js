@@ -25,9 +25,12 @@ export function initSavingsTab({ root }) {
 
   const savingsList = root.querySelector("#savings-list");
   const savingsEmpty = root.querySelector("#savings-empty");
+  const savingsSubmitButton = root.querySelector("#savings-submit-button");
+  const savingsCancelEditButton = root.querySelector("#savings-cancel-edit");
 
   const nestProgress = root.querySelector("#nest-progress");
   const nestProgressLabel = root.querySelector("#nest-progress-label");
+  const payoutChart = root.querySelector("#savings-payout-chart");
 
   const plannerForm = root.querySelector("#planner-form");
   const plannerContributionInput = root.querySelector("#planner-contribution");
@@ -37,11 +40,14 @@ export function initSavingsTab({ root }) {
 
   let transactions = [];
   let savingsRecords = loadSavingsRecords();
+  let editingRecordId = null;
+  const defaultSubmitLabel = savingsSubmitButton?.textContent || "Добавить накопление";
 
   populateMonthOptions();
   renderMonthlyProgress();
   renderSavingsRecords();
   renderNestProgress();
+  renderPayoutChart();
 
   monthSelect?.addEventListener("change", () => {
     renderMonthlyProgress();
@@ -61,8 +67,7 @@ export function initSavingsTab({ root }) {
       return;
     }
 
-    const record = {
-      id: cryptoRandomId(),
+    const baseRecord = {
       name: nameValue || "Накопление",
       maturityDate: maturityDateValue,
       currentBalance: balanceValue,
@@ -70,13 +75,31 @@ export function initSavingsTab({ root }) {
       compounding: compoundingValue
     };
 
-    savingsRecords.push(record);
+    if (editingRecordId) {
+      const recordIndex = savingsRecords.findIndex((record) => record.id === editingRecordId);
+      if (recordIndex !== -1) {
+        savingsRecords[recordIndex] = { ...savingsRecords[recordIndex], ...baseRecord, id: editingRecordId };
+        setFormStatus("Накопление обновлено.");
+      } else {
+        savingsRecords.push({ id: editingRecordId, ...baseRecord });
+        setFormStatus("Накопление добавлено.");
+      }
+      editingRecordId = null;
+    } else {
+      savingsRecords.push({ id: cryptoRandomId(), ...baseRecord });
+      setFormStatus("Накопление добавлено.");
+    }
+
     persistSavingsRecords();
     renderSavingsRecords();
     renderNestProgress();
-    setFormStatus("Накопление добавлено.");
+    renderPayoutChart();
+    resetForm();
+  });
 
-    savingsForm?.reset();
+  savingsCancelEditButton?.addEventListener("click", () => {
+    resetForm();
+    setFormStatus("Редактирование отменено.");
   });
 
   plannerForm?.addEventListener("submit", (event) => {
@@ -248,7 +271,10 @@ export function initSavingsTab({ root }) {
       card.innerHTML = `
         <div class="savings-card-header">
           <strong>${escapeHtml(record.name || "Накопление")}</strong>
-          <button class="icon-button" type="button" data-remove="${record.id}" title="Удалить">✕</button>
+          <div class="savings-card-actions">
+            <button class="icon-button" type="button" data-edit="${record.id}" title="Редактировать">✎</button>
+            <button class="icon-button" type="button" data-remove="${record.id}" title="Удалить">✕</button>
+          </div>
         </div>
         <div class="savings-card-body">
           <div><span class="muted">Завершение:</span> ${dateLabel}</div>
@@ -262,6 +288,15 @@ export function initSavingsTab({ root }) {
       savingsList.appendChild(card);
     });
 
+    savingsList.querySelectorAll("[data-edit]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const { edit: id } = button.dataset;
+        const record = savingsRecords.find((item) => item.id === id);
+        if (!record) return;
+        beginEdit(record);
+      });
+    });
+
     savingsList.querySelectorAll("[data-remove]").forEach((button) => {
       button.addEventListener("click", () => {
         const { remove: id } = button.dataset;
@@ -269,6 +304,10 @@ export function initSavingsTab({ root }) {
         persistSavingsRecords();
         renderSavingsRecords();
         renderNestProgress();
+        renderPayoutChart();
+        if (editingRecordId === id) {
+          resetForm();
+        }
       });
     });
   }
@@ -284,6 +323,93 @@ export function initSavingsTab({ root }) {
     nestProgressLabel.textContent = `Всего учтённых накоплений: ${formatCurrency(totalExpected)} из цели ${formatCurrency(
       NEST_TARGET
     )}`;
+  }
+
+  function renderPayoutChart() {
+    if (!payoutChart) return;
+
+    const hasPlotly = typeof window !== "undefined" && typeof window.Plotly !== "undefined";
+    if (!hasPlotly) {
+      payoutChart.classList.add("empty-state");
+      payoutChart.textContent = "Не удалось загрузить модуль визуализации.";
+      return;
+    }
+
+    const now = new Date();
+    const startMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastMaturity = savingsRecords.reduce((latest, record) => {
+      const maturity = normalizeDate(record.maturityDate);
+      if (!maturity) return latest;
+      return !latest || maturity > latest ? maturity : latest;
+    }, null);
+
+    const endMonth = lastMaturity
+      ? new Date(lastMaturity.getFullYear(), lastMaturity.getMonth() + 12, 1)
+      : new Date(startMonth.getFullYear(), startMonth.getMonth() + 12, 1);
+
+    const payoutsByMonth = new Map();
+    savingsRecords.forEach((record) => {
+      const maturity = normalizeDate(record.maturityDate);
+      if (!maturity) return;
+      const key = createMonthKey(maturity);
+      payoutsByMonth.set(key, (payoutsByMonth.get(key) || 0) + calculateExpectedBalance(record));
+    });
+
+    const monthKeys = [];
+    const monthLabels = [];
+    const expectedPayouts = [];
+    const plannedContributions = [];
+
+    let cursor = new Date(startMonth);
+    while (cursor <= endMonth) {
+      const key = createMonthKey(cursor);
+      monthKeys.push(key);
+      monthLabels.push(formatMonthYear(cursor.getFullYear(), cursor.getMonth() + 1));
+      expectedPayouts.push(payoutsByMonth.get(key) || 0);
+      plannedContributions.push(MONTHLY_GOAL);
+      cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+    }
+
+    payoutChart.classList.remove("empty-state");
+    payoutChart.textContent = "";
+
+    window.Plotly.react(
+      payoutChart,
+      [
+        {
+          x: monthKeys,
+          y: plannedContributions,
+          name: "Плановые взносы",
+          mode: "lines",
+          line: { color: "#0b7285", width: 3, dash: "dot" },
+          hovertemplate: "%{y:.0f} ₽<extra>%{fullData.name}</extra>"
+        },
+        {
+          x: monthKeys,
+          y: expectedPayouts,
+          name: "Ожидаемые выплаты",
+          type: "bar",
+          marker: { color: "#51cf66" },
+          hovertemplate: "%{y:.0f} ₽<extra>%{fullData.name}</extra>"
+        }
+      ],
+      {
+        height: 360,
+        margin: { t: 20, r: 20, b: 60, l: 60 },
+        barmode: "group",
+        hovermode: "x unified",
+        legend: { orientation: "h", x: 0, y: 1.15 },
+        xaxis: {
+          tickmode: "array",
+          tickvals: monthKeys,
+          ticktext: monthLabels,
+          title: "Месяц"
+        },
+        yaxis: { title: "Сумма, ₽" },
+        template: "plotly_white"
+      },
+      { displayModeBar: false, responsive: true }
+    );
   }
 
   function calculateExpectedBalance(record) {
@@ -316,6 +442,12 @@ export function initSavingsTab({ root }) {
     const endYear = end.getFullYear();
     const endMonth = end.getMonth();
     return (endYear - startYear) * 12 + (endMonth - startMonth);
+  }
+
+  function createMonthKey(date) {
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    return `${year}-${String(month).padStart(2, "0")}`;
   }
 
   function calculatePlan(monthlyContribution, years, rate) {
@@ -353,6 +485,40 @@ export function initSavingsTab({ root }) {
     const div = document.createElement("div");
     div.textContent = value;
     return div.innerHTML;
+  }
+
+  function beginEdit(record) {
+    editingRecordId = record.id;
+    if (savingsNameInput) {
+      savingsNameInput.value = record.name || "";
+    }
+    if (savingsMaturityInput) {
+      savingsMaturityInput.value = record.maturityDate || "";
+    }
+    if (savingsBalanceInput) {
+      savingsBalanceInput.value = record.currentBalance ?? "";
+    }
+    if (savingsRateInput) {
+      savingsRateInput.value = record.rate ?? "";
+    }
+    if (savingsCompoundingSelect) {
+      savingsCompoundingSelect.value = record.compounding || "monthly";
+    }
+    if (savingsSubmitButton) {
+      savingsSubmitButton.textContent = "Сохранить изменения";
+    }
+    savingsCancelEditButton?.classList.remove("hidden");
+    setFormStatus("Редактирование накопления.");
+    savingsNameInput?.focus();
+  }
+
+  function resetForm() {
+    savingsForm?.reset();
+    editingRecordId = null;
+    if (savingsSubmitButton) {
+      savingsSubmitButton.textContent = defaultSubmitLabel;
+    }
+    savingsCancelEditButton?.classList.add("hidden");
   }
 
   function pluralize(value, one, two, many) {

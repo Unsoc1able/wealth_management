@@ -12,6 +12,14 @@
   <p id="monthly-income-summary" class="muted"></p>
 </section>
 
+<section id="nest-egg">
+  <div class="section-heading">
+    <h2>На гнездо</h2>
+  </div>
+  <div id="nest-progress-label" class="progress-label"></div>
+  <div id="nest-progress" class="progress-card"></div>
+</section>
+
 <section id="existing-savings">
   <div class="section-heading">
     <h2>Текущие накопления</h2>
@@ -44,7 +52,10 @@
         </select>
       </label>
     </div>
-    <button type="submit">Добавить накопление</button>
+    <div class="form-actions">
+      <button type="submit" id="savings-submit-button">Добавить накопление</button>
+      <button type="button" id="savings-cancel-edit" class="secondary hidden">Отменить</button>
+    </div>
     <p id="savings-form-status" class="muted status-line"></p>
   </form>
 
@@ -52,12 +63,11 @@
   <div id="savings-list" class="savings-list"></div>
 </section>
 
-<section id="nest-egg">
+<section id="savings-payout">
   <div class="section-heading">
-    <h2>На гнездо</h2>
+    <h2>График ожидаемых выплат</h2>
   </div>
-  <div id="nest-progress-label" class="progress-label"></div>
-  <div id="nest-progress" class="progress-card"></div>
+  <div id="savings-payout-chart" class="chart-container empty-state">Недостаточно данных для прогноза.</div>
 </section>
 
 <section id="savings-planner">
