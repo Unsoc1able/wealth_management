@@ -1,6 +1,7 @@
 import { createTransaction, fetchTransactionsOnce, subscribeToTransactions, getFriendlyErrorMessage } from "./firebase.js";
 import { initOperationsTab } from "./tabs/operations.js";
 import { initAnalyticsTab } from "./tabs/analytics.js";
+import { initSavingsTab } from "./tabs/savings.js";
 
 const state = {
   categories: [],
@@ -17,6 +18,10 @@ const tabsConfig = {
   analytics: {
     templateUrl: "tabs/analytics.html",
     init: initAnalyticsTab
+  },
+  savings: {
+    templateUrl: "tabs/savings.html",
+    init: initSavingsTab
   }
 };
 
