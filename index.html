@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Мой финансовый трекер</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+      background: #f5f5f5;
+    }
+
+    body {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 24px 16px 48px;
+      background: #fff;
+      color: #222;
+    }
+
+    h1, h2 {
+      margin-top: 32px;
+      margin-bottom: 16px;
+      font-weight: 600;
+    }
+
+    form, section {
+      background: #fafafa;
+      border: 1px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 24px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+
+    label {
+      display: block;
+      margin-bottom: 12px;
+      font-size: 0.95rem;
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #d0d0d0;
+      font-size: 1rem;
+      box-sizing: border-box;
+      margin-top: 6px;
+    }
+
+    button {
+      background-color: #0b7285;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      margin-top: 16px;
+    }
+
+    button:hover {
+      background-color: #086073;
+    }
+
+    .row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .row > label {
+      flex: 1 1 200px;
+    }
+
+    ul, ol {
+      padding-left: 20px;
+    }
+
+    .transaction-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 10px 0;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .transaction-item:last-child {
+      border-bottom: none;
+    }
+
+    .info-line {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 0.95rem;
+    }
+
+    .info-line strong {
+      font-weight: 600;
+    }
+
+    .muted {
+      color: #666;
+      font-size: 0.85rem;
+    }
+
+    .empty-state {
+      color: #888;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Мой финансовый трекер</h1>
+    <p>Простое приложение для учёта доходов и расходов на базе Firebase Cloud Firestore.</p>
+  </header>
+
+  <main>
+    <section>
+      <h2>Добавить транзакцию</h2>
+      <form id="transaction-form">
+        <div class="row">
+          <label>
+            Дата
+            <input type="date" id="date" required />
+          </label>
+          <label>
+            Сумма
+            <input type="number" id="amount" min="0.01" step="0.01" placeholder="0.00" required />
+          </label>
+        </div>
+
+        <div class="row">
+          <label>
+            Тип операции
+            <select id="type">
+              <option value="expense">Расход</option>
+              <option value="income">Доход</option>
+            </select>
+          </label>
+          <label>
+            Крупная категория
+            <select id="major-category"></select>
+          </label>
+        </div>
+
+        <label>
+          Подкатегория
+          <input type="text" id="sub-category" placeholder="например, продукты" />
+        </label>
+
+        <label>
+          Комментарий
+          <input type="text" id="note" placeholder="по желанию" />
+        </label>
+
+        <button type="submit">Сохранить</button>
+      </form>
+      <p id="form-status" class="muted"></p>
+    </section>
+
+    <section>
+      <h2>Месячная динамика</h2>
+      <div id="monthly-overview" class="empty-state">Загрузка...</div>
+    </section>
+
+    <section>
+      <h2>Крупные категории (расходы)</h2>
+      <div id="category-breakdown" class="empty-state">Загрузка...</div>
+    </section>
+
+    <section>
+      <h2>Простой прогноз</h2>
+      <div id="forecast" class="empty-state">Недостаточно данных для прогноза.</div>
+    </section>
+
+    <section>
+      <h2>Последние транзакции</h2>
+      <div id="recent-transactions" class="empty-state">Загрузка...</div>
+    </section>
+  </main>
+
+  <script type="module">
+    // --- Firebase imports ---
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      serverTimestamp,
+      query,
+      orderBy,
+      onSnapshot
+    } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+    // --- Firebase initialization ---
+    // Вставьте сюда собственный firebaseConfig (конфигурация из консоли Firebase)
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // --- Настройки категорий ---
+    const majorCategories = [
+      { value: "everyday", label: "Повседневные" },
+      { value: "housing", label: "Жильё" },
+      { value: "transport", label: "Транспорт" },
+      { value: "fun", label: "Развлечения" },
+      { value: "investments", label: "Инвестиции" },
+      { value: "other", label: "Другое" }
+      // Добавьте новые категории в этот массив при необходимости
+    ];
+
+    const categorySelect = document.getElementById("major-category");
+    majorCategories.forEach((category) => {
+      const option = document.createElement("option");
+      option.value = category.value;
+      option.textContent = category.label;
+      categorySelect.appendChild(option);
+    });
+
+    // --- Установка даты по умолчанию ---
+    const dateInput = document.getElementById("date");
+    const setToday = () => {
+      const now = new Date();
+      dateInput.value = now.toISOString().split("T")[0];
+    };
+    setToday();
+
+    const form = document.getElementById("transaction-form");
+    const formStatus = document.getElementById("form-status");
+
+    // --- Добавление новой транзакции ---
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const dateValue = dateInput.value;
+      const amountValue = parseFloat(document.getElementById("amount").value || "0");
+      const typeValue = document.getElementById("type").value;
+      const majorCategoryValue = categorySelect.value;
+      const subCategoryValue = document.getElementById("sub-category").value.trim();
+      const noteValue = document.getElementById("note").value.trim();
+
+      if (!dateValue || !amountValue || amountValue <= 0) {
+        formStatus.textContent = "Пожалуйста, заполните дату и сумму больше 0.";
+        return;
+      }
+
+      formStatus.textContent = "Сохранение...";
+
+      try {
+        await addDoc(collection(db, "transactions"), {
+          date: new Date(dateValue),
+          amount: amountValue,
+          type: typeValue,
+          majorCategory: majorCategoryValue,
+          subCategory: subCategoryValue || null,
+          note: noteValue || null,
+          createdAt: serverTimestamp()
+        });
+
+        form.reset();
+        setToday();
+        formStatus.textContent = "Готово! Транзакция добавлена.";
+      } catch (error) {
+        console.error("Ошибка при добавлении транзакции", error);
+        formStatus.textContent = "Не удалось сохранить. Проверьте консоль.";
+      }
+    });
+
+    const monthlyOverviewEl = document.getElementById("monthly-overview");
+    const categoryBreakdownEl = document.getElementById("category-breakdown");
+    const forecastEl = document.getElementById("forecast");
+    const recentTransactionsEl = document.getElementById("recent-transactions");
+
+    // --- Подписка на изменения в коллекции ---
+    const transactionsQuery = query(
+      collection(db, "transactions"),
+      orderBy("date", "desc"),
+      orderBy("createdAt", "desc")
+    );
+
+    onSnapshot(transactionsQuery, (snapshot) => {
+      const transactions = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      updateMonthlyOverview(transactions);
+      updateCategoryBreakdown(transactions);
+      updateForecast(transactions);
+      updateRecentTransactions(transactions);
+    });
+
+    // Унифицированная нормализация даты (Firestore Timestamp, Date или строка)
+    function normalizeDate(value) {
+      if (!value) return null;
+      const base = value.toDate ? value.toDate() : value;
+      const date = base instanceof Date ? base : new Date(base);
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    // --- Аналитика: Месячная динамика ---
+    function updateMonthlyOverview(transactions) {
+      if (!transactions.length) {
+        monthlyOverviewEl.textContent = "Пока нет данных.";
+        monthlyOverviewEl.classList.add("empty-state");
+        return;
+      }
+
+      const monthlyMap = new Map();
+
+      transactions.forEach((tx) => {
+        const date = normalizeDate(tx.date);
+        if (!date) return;
+        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+        if (!monthlyMap.has(key)) {
+          monthlyMap.set(key, { income: 0, expense: 0 });
+        }
+        const record = monthlyMap.get(key);
+        if (tx.type === "income") {
+          record.income += tx.amount;
+        } else if (tx.type === "expense") {
+          record.expense += tx.amount;
+        }
+      });
+
+      const sortedEntries = Array.from(monthlyMap.entries()).sort((a, b) => (a[0] > b[0] ? -1 : 1));
+      monthlyOverviewEl.classList.remove("empty-state");
+      monthlyOverviewEl.innerHTML = "";
+
+      const list = document.createElement("ul");
+      sortedEntries.forEach(([month, values]) => {
+        const net = values.income - values.expense;
+        const item = document.createElement("li");
+        item.innerHTML = `<strong>${month}</strong>: доход ${values.income.toFixed(2)}, расход ${values.expense.toFixed(2)}, нетто ${net.toFixed(2)}`;
+        list.appendChild(item);
+      });
+
+      monthlyOverviewEl.appendChild(list);
+    }
+
+    // --- Аналитика: Крупные категории ---
+    function updateCategoryBreakdown(transactions) {
+      const expenses = transactions.filter((tx) => tx.type === "expense");
+
+      if (!expenses.length) {
+        categoryBreakdownEl.textContent = "Расходов пока нет.";
+        categoryBreakdownEl.classList.add("empty-state");
+        return;
+      }
+
+      const categoryTotals = new Map();
+      const monthsSet = new Set();
+
+      expenses.forEach((tx) => {
+        const date = normalizeDate(tx.date);
+        if (!date) return;
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+        monthsSet.add(monthKey);
+        const key = tx.majorCategory || "other";
+        categoryTotals.set(key, (categoryTotals.get(key) || 0) + tx.amount);
+      });
+
+      const monthsCount = monthsSet.size || 1;
+
+      categoryBreakdownEl.classList.remove("empty-state");
+      categoryBreakdownEl.innerHTML = "";
+
+      const list = document.createElement("ul");
+      categoryTotals.forEach((total, key) => {
+        const categoryName = majorCategories.find((c) => c.value === key)?.label || key;
+        const avg = total / monthsCount;
+        const item = document.createElement("li");
+        item.textContent = `${categoryName} — всего ${total.toFixed(2)}, в среднем ${avg.toFixed(2)} в месяц`;
+        list.appendChild(item);
+      });
+
+      categoryBreakdownEl.appendChild(list);
+    }
+
+    // --- Аналитика: Прогноз ---
+    function updateForecast(transactions) {
+      const monthlyMap = new Map();
+
+      transactions.forEach((tx) => {
+        const date = normalizeDate(tx.date);
+        if (!date) return;
+        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+        if (!monthlyMap.has(key)) {
+          monthlyMap.set(key, { income: 0, expense: 0 });
+        }
+        const record = monthlyMap.get(key);
+        if (tx.type === "income") {
+          record.income += tx.amount;
+        } else if (tx.type === "expense") {
+          record.expense += tx.amount;
+        }
+      });
+
+      const sorted = Array.from(monthlyMap.entries())
+        .sort((a, b) => (a[0] > b[0] ? -1 : 1))
+        .slice(0, 3);
+
+      if (sorted.length < 2) {
+        forecastEl.textContent = "Недостаточно данных для прогноза.";
+        forecastEl.classList.add("empty-state");
+        return;
+      }
+
+      const netValues = sorted.map(([_, values]) => values.income - values.expense);
+      const averageNet = netValues.reduce((sum, value) => sum + value, 0) / netValues.length;
+      const twoMonthForecast = averageNet * 2;
+
+      forecastEl.classList.remove("empty-state");
+      forecastEl.innerHTML = `
+        <p>Ожидаемый средний месячный нетто-результат: <strong>${averageNet.toFixed(2)}</strong></p>
+        <p>Прогноз на 2 месяца: <strong>${twoMonthForecast.toFixed(2)}</strong></p>
+        <p class="muted">Учитываются последние ${sorted.length} месяца(ев) с данными.</p>
+      `;
+    }
+
+    // --- Список последних транзакций ---
+    function updateRecentTransactions(transactions) {
+      if (!transactions.length) {
+        recentTransactionsEl.textContent = "Пока нет данных.";
+        recentTransactionsEl.classList.add("empty-state");
+        return;
+      }
+
+      const sorted = [...transactions]
+        .sort((a, b) => {
+          const dateA = normalizeDate(a.date);
+          const dateB = normalizeDate(b.date);
+          return (dateB?.getTime() || 0) - (dateA?.getTime() || 0);
+        })
+        .slice(0, 10);
+
+      recentTransactionsEl.classList.remove("empty-state");
+      recentTransactionsEl.innerHTML = "";
+
+      sorted.forEach((tx) => {
+        const date = normalizeDate(tx.date) || new Date();
+        const categoryName = majorCategories.find((c) => c.value === tx.majorCategory)?.label || tx.majorCategory || "Без категории";
+        const sign = tx.type === "income" ? "+" : "-";
+        const item = document.createElement("div");
+        item.className = "transaction-item";
+        item.innerHTML = `
+          <div class="info-line">
+            <span>${date.toLocaleDateString()}</span>
+            <strong>${sign}${tx.amount.toFixed(2)}</strong>
+          </div>
+          <div class="muted">${categoryName}${tx.subCategory ? ` / ${tx.subCategory}` : ""}</div>
+          ${tx.note ? `<div>${tx.note}</div>` : ""}
+        `;
+        recentTransactionsEl.appendChild(item);
+      });
+    }
+  </script>
+</body>
+</html>
