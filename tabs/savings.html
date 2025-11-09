@@ -1,0 +1,85 @@
+<section id="income-progress">
+  <div class="section-heading">
+    <h2>Прогресс по доходам</h2>
+  </div>
+  <div class="controls">
+    <label>
+      Месяц
+      <select id="savings-month-select"></select>
+    </label>
+  </div>
+  <div id="monthly-goal-progress" class="progress-card"></div>
+  <p id="monthly-income-summary" class="muted"></p>
+</section>
+
+<section id="existing-savings">
+  <div class="section-heading">
+    <h2>Текущие накопления</h2>
+  </div>
+  <form id="savings-form" class="stacked-form">
+    <div class="row">
+      <label>
+        Название или цель
+        <input type="text" id="savings-name" placeholder="Например, депозит в банке" />
+      </label>
+      <label>
+        Дата завершения
+        <input type="date" id="savings-maturity" required />
+      </label>
+    </div>
+    <div class="row">
+      <label>
+        Текущий баланс, ₽
+        <input type="number" id="savings-balance" min="0" step="0.01" required />
+      </label>
+      <label>
+        Ставка, %
+        <input type="number" id="savings-rate" min="0" step="0.01" required />
+      </label>
+      <label>
+        Начисление процентов
+        <select id="savings-compounding" required>
+          <option value="monthly">Ежемесячная капитализация</option>
+          <option value="yearly">Ежегодная капитализация</option>
+        </select>
+      </label>
+    </div>
+    <button type="submit">Добавить накопление</button>
+    <p id="savings-form-status" class="muted status-line"></p>
+  </form>
+
+  <div id="savings-empty" class="empty-state">Пока нет учтённых накоплений.</div>
+  <div id="savings-list" class="savings-list"></div>
+</section>
+
+<section id="nest-egg">
+  <div class="section-heading">
+    <h2>На гнездо</h2>
+  </div>
+  <div id="nest-progress-label" class="progress-label"></div>
+  <div id="nest-progress" class="progress-card"></div>
+</section>
+
+<section id="savings-planner">
+  <div class="section-heading">
+    <h2>Планирование накоплений</h2>
+  </div>
+  <form id="planner-form" class="stacked-form">
+    <div class="row">
+      <label>
+        Ежемесячный взнос, ₽
+        <input type="number" id="planner-contribution" min="0" step="0.01" required />
+      </label>
+      <label>
+        Срок, лет
+        <input type="number" id="planner-years" min="1" step="1" required />
+      </label>
+      <label>
+        Ставка сверх инфляции, % (ежегодная)
+        <input type="number" id="planner-rate" min="0" step="0.01" required />
+      </label>
+    </div>
+    <button type="submit">Рассчитать</button>
+  </form>
+  <div id="planner-result" class="calculation-result muted"></div>
+</section>
