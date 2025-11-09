@@ -488,12 +488,14 @@ export function initAnalyticsTab({ root, categories = [] }) {
       const sign = tx.type === "income" ? "+" : "-";
       const item = document.createElement("div");
       item.className = "transaction-item";
+      const subCategoryLabel = tx.subCategory ? ` / ${tx.subCategory}` : "";
+      const badge = tx.isRecurring ? '<span class="badge">Регулярно</span>' : "";
       item.innerHTML = `
         <div class="info-line">
           <span>${date.toLocaleDateString()}</span>
           <strong>${sign}${tx.amount.toFixed(2)}</strong>
         </div>
-        <div class="muted">${categoryName}${tx.subCategory ? ` / ${tx.subCategory}` : ""}</div>
+        <div class="muted">${categoryName}${subCategoryLabel}${badge ? ` ${badge}` : ""}</div>
         ${tx.note ? `<div>${tx.note}</div>` : ""}
       `;
       recentTransactionsEl.appendChild(item);

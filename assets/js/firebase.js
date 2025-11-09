@@ -54,7 +54,18 @@ export async function fetchTransactionsOnce() {
   return mapSnapshot(snapshot);
 }
 
-export async function createTransaction({ date, amount, type, majorCategory, subCategory, note }) {
+export async function createTransaction({
+  date,
+  amount,
+  type,
+  majorCategory,
+  subCategory,
+  note,
+  isRecurring = false,
+  recurrenceInterval = null
+}) {
+  const recurring = Boolean(isRecurring);
+  const interval = recurring ? recurrenceInterval || "monthly" : null;
   return addDoc(transactionsCollection, {
     date: date instanceof Date ? date : new Date(date),
     amount,
@@ -62,6 +73,8 @@ export async function createTransaction({ date, amount, type, majorCategory, sub
     majorCategory,
     subCategory: subCategory || null,
     note: note || null,
+    isRecurring: recurring,
+    recurrenceInterval: interval,
     createdAt: serverTimestamp()
   });
 }
