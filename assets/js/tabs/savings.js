@@ -1,4 +1,10 @@
-import { normalizeDate, formatMonthYear, getCurrentMonthValue } from "../utils.js";
+import {
+  normalizeDate,
+  formatMonthYear,
+  getCurrentMonthValue,
+  setupFormattedNumberInput,
+  getNumericInputValue
+} from "../utils.js";
 
 const MONTHLY_GOAL = 150_000;
 const NEST_TARGET = 25_000_000;
@@ -35,6 +41,12 @@ export function initSavingsTab({ root }) {
   const plannerRateInput = root.querySelector("#planner-rate");
   const plannerResult = root.querySelector("#planner-result");
 
+  setupFormattedNumberInput(savingsBalanceInput, { allowDecimal: true, maxDecimals: 2 });
+  setupFormattedNumberInput(savingsRateInput, { allowDecimal: true, maxDecimals: 2 });
+  setupFormattedNumberInput(plannerContributionInput, { allowDecimal: true, maxDecimals: 2 });
+  setupFormattedNumberInput(plannerYearsInput, { allowDecimal: false, maxDecimals: 0 });
+  setupFormattedNumberInput(plannerRateInput, { allowDecimal: true, maxDecimals: 2 });
+
   let transactions = [];
   let savingsRecords = loadSavingsRecords();
 
@@ -51,12 +63,12 @@ export function initSavingsTab({ root }) {
     event.preventDefault();
 
     const maturityDateValue = savingsMaturityInput?.value;
-    const balanceValue = parseFloat(savingsBalanceInput?.value || "0");
-    const rateValue = parseFloat(savingsRateInput?.value || "0");
+    const balanceValue = getNumericInputValue(savingsBalanceInput, { allowDecimal: true, maxDecimals: 2 });
+    const rateValue = getNumericInputValue(savingsRateInput, { allowDecimal: true, maxDecimals: 2 });
     const compoundingValue = savingsCompoundingSelect?.value || "monthly";
     const nameValue = (savingsNameInput?.value || "").trim();
 
-    if (!maturityDateValue || Number.isNaN(balanceValue) || balanceValue <= 0 || Number.isNaN(rateValue)) {
+    if (!maturityDateValue || !Number.isFinite(balanceValue) || balanceValue <= 0 || !Number.isFinite(rateValue)) {
       setFormStatus("Проверьте дату, сумму и ставку.");
       return;
     }
@@ -83,16 +95,22 @@ export function initSavingsTab({ root }) {
     event.preventDefault();
     if (!plannerResult) return;
 
-    const contributionValue = parseFloat(plannerContributionInput?.value || "0");
-    const yearsValue = parseInt(plannerYearsInput?.value || "0", 10);
-    const rateValue = parseFloat(plannerRateInput?.value || "0");
+    const contributionValue = getNumericInputValue(plannerContributionInput, { allowDecimal: true, maxDecimals: 2 });
+    const yearsValue = getNumericInputValue(plannerYearsInput, { allowDecimal: false, maxDecimals: 0 });
+    const rateValue = getNumericInputValue(plannerRateInput, { allowDecimal: true, maxDecimals: 2 });
 
-    if (Number.isNaN(contributionValue) || contributionValue <= 0 || Number.isNaN(yearsValue) || yearsValue <= 0) {
+    if (
+      !Number.isFinite(contributionValue) ||
+      contributionValue <= 0 ||
+      !Number.isFinite(yearsValue) ||
+      yearsValue <= 0
+    ) {
       plannerResult.textContent = "Пожалуйста, укажите положительные значения для взноса и срока.";
       return;
     }
 
-    const effectiveRate = Math.max(0, rateValue) / 100;
+    const safeRate = Number.isFinite(rateValue) ? rateValue : 0;
+    const effectiveRate = Math.max(0, safeRate) / 100;
     const calculation = calculatePlan(contributionValue, yearsValue, effectiveRate);
 
     plannerResult.innerHTML = `

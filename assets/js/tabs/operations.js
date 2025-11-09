@@ -1,4 +1,11 @@
-import { normalizeDate, getCurrentDateValue, getCurrentMonthValue, formatMonthYear } from "../utils.js";
+import {
+  normalizeDate,
+  getCurrentDateValue,
+  getCurrentMonthValue,
+  formatMonthYear,
+  setupFormattedNumberInput,
+  getNumericInputValue
+} from "../utils.js";
 
 export function initOperationsTab({
   root,
@@ -30,6 +37,8 @@ export function initOperationsTab({
 
   let categoryList = categories;
   let transactions = [];
+
+  setupFormattedNumberInput(amountInput, { allowDecimal: true, maxDecimals: 2 });
 
   setDefaultMonth();
   renderCategoryOptions();
@@ -89,7 +98,7 @@ export function initOperationsTab({
     if (!onAddTransaction) return;
 
     const dateValue = dateInput?.value;
-    const amountValue = parseFloat(amountInput?.value || "0");
+    const amountValue = getNumericInputValue(amountInput, { allowDecimal: true, maxDecimals: 2 });
     const typeValue = typeSelect?.value || "expense";
     const majorCategoryValue = majorCategorySelect?.value || "other";
     const subCategorySelection = subCategorySelect?.value || "";
@@ -106,7 +115,7 @@ export function initOperationsTab({
       subCategoryValue = emoji ? `${emoji} ${label}` : label;
     }
 
-    if (!dateValue || !amountValue || amountValue <= 0) {
+    if (!dateValue || !Number.isFinite(amountValue) || amountValue <= 0) {
       if (formStatus) {
         formStatus.textContent = "Пожалуйста, заполните дату и сумму больше 0.";
       }
