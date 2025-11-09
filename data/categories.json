@@ -12,6 +12,7 @@
         { "value": "cosmetics", "label": "Косметика", "emoji": "💄" },
         { "value": "alcohol", "label": "Алкоголь", "emoji": "🍷" },
         { "value": "snacks", "label": "Перекусы/Кофе", "emoji": "☕" },
+        { "value": "flowers", "label": "Цветы", "emoji": "💐" },
         { "value": "dopamine", "label": "Легкий дофаминчик", "emoji": "🎁" }
       ]
     },
@@ -63,6 +64,16 @@
         { "value": "vet", "label": "ветеринар", "emoji": "🩺" },
         { "value": "toys", "label": "игрушки", "emoji": "🧸" },
         { "value": "food", "label": "корм", "emoji": "🍖" }
+      ]
+    },
+    {
+      "value": "travel",
+      "label": "Путешествия",
+      "emoji": "✈️",
+      "subCategories": [
+        { "value": "hotel", "label": "Отель", "emoji": "🏨" },
+        { "value": "travel-food", "label": "Еда", "emoji": "🍽️" },
+        { "value": "souvenirs", "label": "Сувениры", "emoji": "🎁" }
       ]
     }
   ]

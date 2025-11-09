@@ -30,11 +30,11 @@
     <div class="row">
       <label>
         Текущий баланс, ₽
-        <input type="number" id="savings-balance" min="0" step="0.01" required />
+        <input type="text" id="savings-balance" inputmode="decimal" required />
       </label>
       <label>
         Ставка, %
-        <input type="number" id="savings-rate" min="0" step="0.01" required />
+        <input type="text" id="savings-rate" inputmode="decimal" required />
       </label>
       <label>
         Начисление процентов
@@ -68,15 +68,15 @@
     <div class="row">
       <label>
         Ежемесячный взнос, ₽
-        <input type="number" id="planner-contribution" min="0" step="0.01" required />
+        <input type="text" id="planner-contribution" inputmode="decimal" required />
       </label>
       <label>
         Срок, лет
-        <input type="number" id="planner-years" min="1" step="1" required />
+        <input type="text" id="planner-years" inputmode="numeric" required />
       </label>
       <label>
         Ставка сверх инфляции, % (ежегодная)
-        <input type="number" id="planner-rate" min="0" step="0.01" required />
+        <input type="text" id="planner-rate" inputmode="decimal" required />
       </label>
     </div>
     <button type="submit">Рассчитать</button>
