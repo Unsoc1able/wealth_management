@@ -4,13 +4,14 @@ const PLOTLY_ERROR_MESSAGE = "Не удалось загрузить модул�
 const UNCATEGORIZED_SUBCATEGORY = "Без подкатегории";
 
 export function initAnalyticsTab({ root, categories = [] }) {
+  const monthlyCategoryBreakdownEl = root.querySelector("#monthly-category-breakdown");
+  const monthlyCategoryCaptionEl = root.querySelector("#monthly-category-caption");
   const monthlyTrendsEl = root.querySelector("#monthly-trends");
   const categoryTrendsEl = root.querySelector("#category-trends");
   const subcategoryTrendsEl = root.querySelector("#subcategory-trends");
   const subcategoryTitleEl = root.querySelector("#subcategory-title");
   const categorySelectEl = root.querySelector("#category-select");
   const forecastEl = root.querySelector("#forecast");
-  const recentTransactionsEl = root.querySelector("#recent-transactions");
 
   let categoryList = categories;
   let transactions = [];
@@ -31,6 +32,15 @@ export function initAnalyticsTab({ root, categories = [] }) {
 
   function getCategoryLabel(value) {
     return categoryList.find((category) => category.value === value)?.label || value || "Прочее";
+  }
+
+  function getCategoryDisplayName(value) {
+    const category = categoryList.find((item) => item.value === value);
+    if (!category) {
+      return value || "Прочее";
+    }
+    const label = category.label || value || "Прочее";
+    return category.emoji ? `${category.emoji} ${label}` : label;
   }
 
   function buildExpenseStructure() {
@@ -89,6 +99,110 @@ export function initAnalyticsTab({ root, categories = [] }) {
       subcategoriesMap,
       hasExpenses: expenses.length > 0
     };
+  }
+
+  function renderMonthlyCategoryBreakdown() {
+    if (!monthlyCategoryBreakdownEl) return;
+
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const monthLabel = formatMonthYear(year, month);
+
+    if (monthlyCategoryCaptionEl) {
+      monthlyCategoryCaptionEl.textContent = `Месяц: ${monthLabel}`;
+    }
+
+    const expenses = transactions.filter((tx) => {
+      if (tx.type !== "expense") return false;
+      const date = normalizeDate(tx.date);
+      if (!date) return false;
+      return date.getFullYear() === year && date.getMonth() + 1 === month;
+    });
+
+    if (!expenses.length) {
+      setEmptyState(monthlyCategoryBreakdownEl, "В этом месяце расходов пока не было.");
+      return;
+    }
+
+    if (!hasPlotly()) {
+      setEmptyState(monthlyCategoryBreakdownEl, PLOTLY_ERROR_MESSAGE);
+      return;
+    }
+
+    const categoryMap = new Map();
+
+    expenses.forEach((tx) => {
+      const categoryKey = tx.majorCategory || "other";
+      if (!categoryMap.has(categoryKey)) {
+        categoryMap.set(categoryKey, {
+          key: categoryKey,
+          label: getCategoryDisplayName(categoryKey),
+          total: 0,
+          subMap: new Map()
+        });
+      }
+      const entry = categoryMap.get(categoryKey);
+      const amount = tx.amount || 0;
+      entry.total += amount;
+
+      const rawSubcategory = typeof tx.subCategory === "string" ? tx.subCategory.trim() : "";
+      const subcategoryKey = rawSubcategory || UNCATEGORIZED_SUBCATEGORY;
+      entry.subMap.set(subcategoryKey, (entry.subMap.get(subcategoryKey) || 0) + amount);
+    });
+
+    const categoriesData = Array.from(categoryMap.values()).filter((item) => item.total > 0);
+
+    if (!categoriesData.length) {
+      setEmptyState(monthlyCategoryBreakdownEl, "В этом месяце расходов пока не было.");
+      return;
+    }
+
+    categoriesData.sort((a, b) => b.total - a.total);
+
+    const subcategoryTotals = new Map();
+    categoriesData.forEach((category) => {
+      category.subMap.forEach((amount, name) => {
+        subcategoryTotals.set(name, (subcategoryTotals.get(name) || 0) + amount);
+      });
+    });
+
+    const subcategoryNames = Array.from(subcategoryTotals.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([name]) => name);
+
+    const categoryLabels = categoriesData.map((category) => category.label);
+
+    const traces = subcategoryNames.map((name) => ({
+      x: categoryLabels,
+      y: categoriesData.map((category) => category.subMap.get(name) || 0),
+      name,
+      type: "bar",
+      hovertemplate: "%{y:.2f} ₽<extra>%{fullData.name}</extra>"
+    }));
+
+    if (!traces.length) {
+      setEmptyState(monthlyCategoryBreakdownEl, "В этом месяце расходов пока не было.");
+      return;
+    }
+
+    monthlyCategoryBreakdownEl.classList.remove("empty-state");
+    monthlyCategoryBreakdownEl.textContent = "";
+
+    window.Plotly.react(
+      monthlyCategoryBreakdownEl,
+      traces,
+      {
+        height: 360,
+        margin: { t: 20, r: 20, b: 80, l: 60 },
+        barmode: "stack",
+        legend: { orientation: "h", x: 0, y: 1.15 },
+        xaxis: { title: "Категория", tickangle: -30 },
+        yaxis: { title: "Расходы, ₽" },
+        template: "plotly_white"
+      },
+      { displayModeBar: false, responsive: true }
+    );
   }
 
   function renderMonthlyTrends() {
@@ -275,10 +389,10 @@ export function initAnalyticsTab({ root, categories = [] }) {
       }
       activeCategoryKeys.push(categoryKey);
       traces.push({
-        x: monthKeys,
+        x: monthLabels,
         y: values,
         name: getCategoryLabel(categoryKey),
-        mode: "lines+markers",
+        type: "bar",
         hovertemplate: "%{y:.2f} ₽<extra>%{fullData.name}</extra>"
       });
     });
@@ -299,12 +413,10 @@ export function initAnalyticsTab({ root, categories = [] }) {
       {
         height: 360,
         margin: { t: 20, r: 20, b: 60, l: 60 },
-        hovermode: "x unified",
-        legend: { orientation: "h", x: 0, y: 1.2 },
+        barmode: "stack",
+        hovermode: "x",
+        legend: { orientation: "h", x: 0, y: 1.15 },
         xaxis: {
-          tickmode: "array",
-          tickvals: monthKeys,
-          ticktext: monthLabels,
           title: "Месяц"
         },
         yaxis: { title: "Сумма расходов, ₽" },
@@ -376,10 +488,10 @@ export function initAnalyticsTab({ root, categories = [] }) {
           return;
         }
         traces.push({
-          x: monthKeys,
+          x: monthLabels,
           y: values,
           name: subcategoryName,
-          mode: "lines+markers",
+          type: "bar",
           hovertemplate: "%{y:.2f} ₽<extra>%{fullData.name}</extra>"
         });
       });
@@ -405,12 +517,10 @@ export function initAnalyticsTab({ root, categories = [] }) {
       {
         height: 360,
         margin: { t: 20, r: 20, b: 60, l: 60 },
-        hovermode: "x unified",
-        legend: { orientation: "h", x: 0, y: 1.2 },
+        barmode: "stack",
+        hovermode: "x",
+        legend: { orientation: "h", x: 0, y: 1.15 },
         xaxis: {
-          tickmode: "array",
-          tickvals: monthKeys,
-          ticktext: monthLabels,
           title: "Месяц"
         },
         yaxis: { title: "Сумма расходов, ₽" },
@@ -462,51 +572,11 @@ export function initAnalyticsTab({ root, categories = [] }) {
     `;
   }
 
-  function updateRecentTransactions() {
-    if (!recentTransactionsEl) return;
-
-    if (!transactions.length) {
-      recentTransactionsEl.textContent = "Пока нет данных.";
-      recentTransactionsEl.classList.add("empty-state");
-      return;
-    }
-
-    const sorted = [...transactions]
-      .sort((a, b) => {
-        const dateA = normalizeDate(a.date);
-        const dateB = normalizeDate(b.date);
-        return (dateB?.getTime() || 0) - (dateA?.getTime() || 0);
-      })
-      .slice(0, 10);
-
-    recentTransactionsEl.classList.remove("empty-state");
-    recentTransactionsEl.innerHTML = "";
-
-    sorted.forEach((tx) => {
-      const date = normalizeDate(tx.date) || new Date();
-      const categoryName = getCategoryLabel(tx.majorCategory);
-      const sign = tx.type === "income" ? "+" : "-";
-      const item = document.createElement("div");
-      item.className = "transaction-item";
-      const subCategoryLabel = tx.subCategory ? ` / ${tx.subCategory}` : "";
-      const badge = tx.isRecurring ? '<span class="badge">Регулярно</span>' : "";
-      item.innerHTML = `
-        <div class="info-line">
-          <span>${date.toLocaleDateString()}</span>
-          <strong>${sign}${tx.amount.toFixed(2)}</strong>
-        </div>
-        <div class="muted">${categoryName}${subCategoryLabel}${badge ? ` ${badge}` : ""}</div>
-        ${tx.note ? `<div>${tx.note}</div>` : ""}
-      `;
-      recentTransactionsEl.appendChild(item);
-    });
-  }
-
   function render() {
+    renderMonthlyCategoryBreakdown();
     renderMonthlyTrends();
     renderCategoryTrends();
     updateForecast();
-    updateRecentTransactions();
   }
 
   categorySelectEl?.addEventListener("change", (event) => {
@@ -522,7 +592,7 @@ export function initAnalyticsTab({ root, categories = [] }) {
     updateCategories(nextCategories) {
       categoryList = Array.isArray(nextCategories) ? nextCategories : [];
       renderCategoryTrends();
-      updateRecentTransactions();
+      renderMonthlyCategoryBreakdown();
     }
   };
 }
