@@ -249,6 +249,13 @@ ul, ol {
   flex-wrap: wrap;
 }
 
+.section-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
 .section-heading h2 {
   margin: 0;
 }

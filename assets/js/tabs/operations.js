@@ -30,6 +30,7 @@ export function initOperationsTab({
   const recurringCheckbox = root.querySelector("#is-recurring");
   const monthFilterInput = root.querySelector("#month-filter");
   const refreshButton = root.querySelector("#refresh-button");
+  const exportButton = root.querySelector("#export-button");
   const refreshStatus = root.querySelector("#refresh-status");
   const monthlySummaryEl = root.querySelector("#monthly-summary");
   const monthlyTransactionsEl = root.querySelector("#monthly-transactions");
@@ -83,6 +84,39 @@ export function initOperationsTab({
       }
     } finally {
       refreshButton.disabled = false;
+    }
+  });
+
+  exportButton?.addEventListener("click", () => {
+    if (!transactions.length) {
+      if (refreshStatus) {
+        refreshStatus.textContent = "Нет данных для выгрузки.";
+      }
+      return;
+    }
+
+    exportButton.disabled = true;
+    if (refreshStatus) {
+      refreshStatus.textContent = "Готовим выгрузку...";
+    }
+
+    try {
+      exportTransactionsToCsv(transactions);
+      if (refreshStatus) {
+        refreshStatus.textContent = "Файл выгрузки готов.";
+        setTimeout(() => {
+          if (refreshStatus.textContent === "Файл выгрузки готов.") {
+            refreshStatus.textContent = "";
+          }
+        }, 3000);
+      }
+    } catch (error) {
+      console.error("Ошибка выгрузки", error);
+      if (refreshStatus) {
+        refreshStatus.textContent = formatError(error);
+      }
+    } finally {
+      exportButton.disabled = false;
     }
   });
 
@@ -489,6 +523,77 @@ export function initOperationsTab({
     recurringTransactionsEl.classList.remove("empty-state");
     recurringTransactionsEl.innerHTML = "";
     recurringTransactionsEl.appendChild(list);
+  }
+
+  function exportTransactionsToCsv(items) {
+    const baseColumns = [
+      "id",
+      "amount",
+      "createdAt",
+      "date",
+      "isRecurring",
+      "majorCategory",
+      "note",
+      "recurrenceInterval",
+      "subCategory",
+      "type"
+    ];
+    const extraColumns = new Set();
+    items.forEach((item) => {
+      Object.keys(item || {}).forEach((key) => {
+        if (!baseColumns.includes(key)) {
+          extraColumns.add(key);
+        }
+      });
+    });
+    const columns = [...baseColumns, ...Array.from(extraColumns).sort()];
+    const rows = [columns.join(",")];
+
+    items.forEach((item) => {
+      const row = columns.map((column) => formatCsvValue(item?.[column], column));
+      rows.push(row.join(","));
+    });
+
+    const csvContent = `\uFEFF${rows.join("\n")}`;
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `transactions-export-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function formatCsvValue(value, column) {
+    if (value === null || value === undefined) {
+      return "";
+    }
+
+    if (column === "date" || column === "createdAt") {
+      const normalized = normalizeDate(value);
+      if (normalized) {
+        return escapeCsv(normalized.toISOString());
+      }
+    }
+
+    if (value instanceof Date) {
+      return escapeCsv(value.toISOString());
+    }
+
+    if (typeof value === "object") {
+      return escapeCsv(JSON.stringify(value));
+    }
+
+    return escapeCsv(String(value));
+  }
+
+  function escapeCsv(value) {
+    if (value === "") return "";
+    const shouldWrap = /[",\n\r]/.test(value);
+    const escaped = value.replace(/\"/g, "\"\"");
+    return shouldWrap ? `"${escaped}"` : escaped;
   }
 
   return {
