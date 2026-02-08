@@ -297,10 +297,7 @@ export function initOperationsTab({
       return;
     }
 
-    const filtered = transactions.filter((tx) => {
-      const date = normalizeDate(tx.date);
-      return date && date.getFullYear() === year && date.getMonth() + 1 === month;
-    });
+    const filtered = buildMonthlyTransactions(year, month);
 
     const monthLabel = formatMonthYear(year, month);
 
@@ -398,6 +395,47 @@ export function initOperationsTab({
     }
 
     updateRecurringSection(filtered, monthLabel);
+  }
+
+  function buildMonthlyTransactions(year, month) {
+    const base = transactions.filter((tx) => {
+      const date = normalizeDate(tx.date);
+      return date && date.getFullYear() === year && date.getMonth() + 1 === month;
+    });
+
+    const recurringTemplates = transactions.filter((tx) => tx.isRecurring);
+    const generated = recurringTemplates
+      .map((tx) => buildRecurringInstance(tx, year, month))
+      .filter((tx) => tx);
+
+    return [...base, ...generated];
+  }
+
+  function buildRecurringInstance(tx, year, month) {
+    const baseDate = normalizeDate(tx.date);
+    if (!baseDate) return null;
+    if (tx.recurrenceInterval && tx.recurrenceInterval !== "monthly") {
+      return null;
+    }
+
+    const baseYear = baseDate.getFullYear();
+    const baseMonth = baseDate.getMonth() + 1;
+    if (year < baseYear || (year === baseYear && month < baseMonth)) {
+      return null;
+    }
+    if (year === baseYear && month === baseMonth) {
+      return null;
+    }
+
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const targetDay = Math.min(baseDate.getDate(), daysInMonth);
+    const occurrenceDate = new Date(year, month - 1, targetDay);
+
+    return {
+      ...tx,
+      id: `${tx.id || "recurring"}-${year}-${String(month).padStart(2, "0")}`,
+      date: occurrenceDate
+    };
   }
 
   function updateRecurringSection(filtered, monthLabel) {
